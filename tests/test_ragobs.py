@@ -64,6 +64,38 @@ class AgentTests(unittest.TestCase):
         self.assertIn("orchestrate", text)
         self.assertIn("budget_5usd | ok", text)
 
+    def test_child_spans_point_at_the_orchestrate_parent(self):
+        tracer = Tracer()
+        Orchestrator(Index(DOCS), tracer).run("how long are call recordings kept")
+        finished = tracer.finished()
+        by_id = {span["span_id"]: span for span in finished}
+        children = [span for span in finished if span["name"] != "orchestrate"]
+        self.assertGreaterEqual(len(children), 3)
+        for span in children:
+            self.assertIsNotNone(span["parent_span_id"])
+            parent = by_id[span["parent_span_id"]]
+            self.assertEqual(parent["name"], "orchestrate")
+            self.assertEqual(parent["trace_id"], span["trace_id"])
+
+    def test_dashboard_rolls_up_span_cost_and_latency(self):
+        tracer = Tracer()
+        Orchestrator(Index(DOCS), tracer).run("how long are call recordings kept")
+        finished = tracer.finished()
+        text = render(finished)
+        orch = next(span for span in finished if span["name"] == "orchestrate")
+        expected_ms = (orch["end_time_unix_nano"] - orch["start_time_unix_nano"]) / 1_000_000
+        line = next(row for row in text.splitlines() if row.startswith("orchestrate |"))
+        name, calls, errors, p50, tokens, cost = [part.strip() for part in line.split("|")]
+        self.assertEqual(name, "orchestrate")
+        self.assertEqual(calls, "1")
+        self.assertEqual(errors, "0")
+        self.assertEqual(p50, f"{expected_ms:.3f}")
+        self.assertEqual(tokens, str(orch["attributes"]["eval.tokens"]))
+        self.assertEqual(cost, f"{orch['attributes']['eval.cost_usd']:.8f}")
+        self.assertGreater(int(tokens), 0)
+        self.assertGreater(float(cost), 0)
+        self.assertIn("budget_5usd | ok", text)
+
 
 class HitHelperTests(unittest.TestCase):
     def test_retrieval_hit_helper(self):
