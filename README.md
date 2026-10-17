@@ -43,4 +43,4 @@ Exit 0 from the demo requires every labeled query to hit the expected memo and t
 
 ## Limits
 
-The corpus is six short memos. BM25 on that set is not a production retriever. Token counts are `max(1, len(text) // 4)`. Latency is process time, not a hosted model. There is no failover, no tenancy, and no claim that this ran for a client.
+The corpus is six short memos. BM25 on that set is not a production retriever. Token counts are `max(1, len(text) // 4)`. Latency is elapsed time from `time.time_ns()`, not a hosted model. There is no failover, no tenancy, and no claim that this ran for a client.
