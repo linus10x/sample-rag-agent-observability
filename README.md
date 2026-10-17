@@ -2,7 +2,7 @@
 
 > Illustrative sample on synthetic memos by Kunjar Bhaduri. Every memo is invented. No client, no employer, and no production system. Built by AI coding tools under my direction. October 2026 (America/Chicago).
 
-This library retrieves from a six-memo corpus, runs a retriever, a drafter and a critic, and records OpenTelemetry-style spans. Eval metrics (retrieval hit, grounded rate, token estimate, latency, sample cost) sit on the spans. A text dashboard rolls those spans up. It does not call a model API, a vector database, or a collector.
+This library retrieves from a six-memo corpus, runs a retriever, a drafter and a critic, and records OpenTelemetry-style spans. The orchestrate span stores whether that run stayed grounded, the token estimate, the latency and the sample cost. Retrieval hit rate and grounded rate come from `summarize` in `ragobs/evals.py`. A text dashboard rolls those spans up. It does not call a model API, a vector database, or a collector.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ flowchart LR
   T --> Dash[cost and latency dashboard]
 ```
 
-The retriever scores token overlap with BM25. The drafter copies the two sentences with the most overlap. The critic drops a sentence whose content words are not in the retrieved memos. If it drops any sentence, that critique span is status error and a revise span records the drop.
+The retriever scores token overlap with BM25. The drafter copies up to two sentences with the most overlap. The critic drops a sentence whose content words are not in the retrieved memos. If it drops any sentence, that critique span is status error and a revise span records the drop.
 
 ## Run
 
@@ -43,4 +43,4 @@ Exit 0 from the demo requires every labeled query to hit the expected memo and t
 
 ## Limits
 
-The corpus is six short memos. BM25 on that set is not a production retriever. Token counts are `len(text) // 4`. Latency is process time, not a hosted model. There is no failover, no tenancy, and no claim that this ran for a client.
+The corpus is six short memos. BM25 on that set is not a production retriever. Token counts are `max(1, len(text) // 4)`. Latency is process time, not a hosted model. There is no failover, no tenancy, and no claim that this ran for a client.
